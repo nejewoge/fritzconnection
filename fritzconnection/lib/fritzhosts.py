@@ -77,28 +77,33 @@ class FritzHosts(AbstractLibraryBase):
     def get_active_hosts(self):
         """
         Returns a list of dicts with information about the active
-        devices. The dict-keys are: 'ip', 'name', 'mac', 'status'
+        devices. The dict-keys are: 'ip', 'name', 'mac', 'status', 'is_meshed', 'mesh_role'
         """
         return [host for host in self.get_hosts_info() if host["status"]]
 
     def get_hosts_info(self):
         """
         Returns a list of dicts with information about the known hosts.
-        The dict-keys are: 'ip', 'name', 'mac', 'status'
+        The dict-keys are: 'ip', 'name', 'mac', 'status', 'is_meshed', 'mesh_role'
         """
         result = []
+        topology_info = self.get_mesh_topology_info()
         for index in itertools.count():
             try:
                 host = self.get_generic_host_entry(index)
             except IndexError:
                 # no more host entries:
                 break
+            mac = host["NewMACAddress"]
+            is_meshed, mesh_role = topology_info.get(mac, (None, None))
             result.append(
                 {
                     "ip": host["NewIPAddress"],
                     "name": host["NewHostName"],
-                    "mac": host["NewMACAddress"],
+                    "mac": mac,
                     "status": host["NewActive"],
+                    "is_meshed": is_meshed,
+                    "mesh_role": mesh_role
                 }
             )
         return result
@@ -118,6 +123,29 @@ class FritzHosts(AbstractLibraryBase):
                 message = f"Error {response.status_code}: Device has no access to topology information."
                 raise FritzActionError(message)
             return response.text if raw else response.json()
+
+    def get_mesh_topology_info(self, topology=None):
+        """
+        Returns the topology information extracted from the given topology
+        as a dictionary. Keys are the devices mac addresses and the values
+        are tuples (is_meshed, mesh_role). is_meshed is a boolean and mesh_role
+        is a string typical with the values "master", "slave" or "unknown".
+        In case no topology information is available an empty dictionary gets
+        returned.
+        """
+        mesh_info = {}
+        if topology is None:
+            try:
+                topology = self.get_mesh_topology()
+            except FritzActionError:
+                return mesh_info
+
+        for node in topology["nodes"]:
+            mac_adresses = [interface["mac_address"] for interface in node["node_interfaces"]]
+            for mac in mac_adresses:
+                mesh_info[mac] = (node["is_meshed"], node["mesh_role"])
+
+        return mesh_info
 
     def get_wakeonlan_status(self, mac_address):
         """
