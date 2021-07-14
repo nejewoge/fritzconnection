@@ -37,11 +37,6 @@ def test_get_mesh_topology_info(mesh_topology_fixture):
     """
     Simple test of the topology_info function.
     """
-    host = FritzHosts()
-    result = host.get_mesh_topology_info(topology=mesh_topology_fixture)
+    result = FritzHosts.get_mesh_topology_info(None, topology=mesh_topology_fixture)
     node = mesh_topology_fixture['nodes'][0]
     assert result[node['device_mac_address']] == (node['is_meshed'], node['mesh_role'])
-
-    # Return empty result upon FritzActionError:
-    empty_result = host.get_mesh_topology_info(topology=None)
-    assert empty_result == {}
