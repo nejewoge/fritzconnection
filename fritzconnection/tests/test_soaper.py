@@ -162,7 +162,7 @@ def test_encode_boolean(value, expected_type):
         ("5 > 3", "5 &gt; 3"),
         ("3 < 5", "3 &lt; 5"),
         ('say "hello"', "say &quot;hello&quot;"),
-        ("let's test again", ["let&apos; test again", "let&#x27;s test again"])
+        ("let's test again", ["let&apos;s test again"])  #, "let&#x27;s test again"])
     ]
 )
 def test_get_html_safe_value(value, expected_results):

@@ -98,6 +98,8 @@ def get_html_safe_value(value):
     value = encode_boolean(value)
     if isinstance(value, str):
         value = html.escape(value)
+        # FritzOS does not accept numerical entities:
+        value = value.replace("&#x27;", "&apos;")
     return value
 
 
