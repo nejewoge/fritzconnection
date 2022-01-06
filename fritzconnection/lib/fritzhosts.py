@@ -13,10 +13,47 @@ from ..core.exceptions import (
     FritzArgumentError,
     FritzLookUpError,
 )
+from ..core.utils import get_xml_root
 from .fritzbase import AbstractLibraryBase
 
 
 SERVICE = "Hosts1"
+HOSTLIST_CONVERTERS = {
+    'Index': int,
+    'Active': bool,
+    'X_AVM-DE_Port': int,
+    'X_AVM-DE_Speed': int,
+    'X_AVM-DE_UpdateAvailable': bool,
+    'X_AVM-DE_Guest': bool,
+    'X_AVM-DE_VPN': bool,
+    'X_AVM-DE_Disallow': bool,
+}
+
+
+def _convert_host_attributes(host):
+    """
+    Helper function for FritzHosts.get_host_list().
+
+    Takes a `host` which is an item-node (representing a host entry)
+    from the xml-file returned from the lua script that gets called from
+    the `path` returned from the `X_AVM-DE_GetHostListPath` action. The
+    datatype of the nodes are documented here: ::
+
+        https://avm.de/fileadmin/user_upload/Global/Service/¬
+        Schnittstellen/hostsSCPD.pdf
+
+    Converts the child-nodes of the node (the host-attributes) to the
+    according datatypes and returns a dictionary with the child-node
+    tags as keys and the converted content as values.
+    """
+    attributes = {}
+    for attribute in host:
+        try:
+            value = HOSTLIST_CONVERTERS[attribute.tag](attribute.text)
+        except KeyError:
+            value = attribute.text
+        attributes[attribute.tag] = value
+    return attributes
 
 
 class FritzHosts(AbstractLibraryBase):
@@ -117,6 +154,80 @@ class FritzHosts(AbstractLibraryBase):
                 }
             )
         return result
+
+    def get_host_list(self):
+        """
+        Returns a list of dictionaries with information about the known
+        hosts according to `X_AVM-DE_GetHostListPath` action. The
+        key-value pairs of a dictionary are:
+
+        'Active': (bool)
+            `True` If host is active, `False` if host is inactive
+            (currently not connected)
+
+        'HostName': (string)
+            Name of the host device
+
+        'Index': (int)
+            Sequential number for each host
+
+        'InterfaceType': (string)
+            The interface with which the host accesses the F!Box
+            (“Ethernet”, “802.11”, "HomePlug", “”)
+
+        'IPAddress': (string)
+             The host's ip address
+
+        'MACAddress': (string)
+            The host's MAC address
+
+        'X_AVM-DE_Guest': (boolean)
+            `True` if the host is connected with guest network, `False`
+            if connected with home network
+
+        'X_AVM-DE_InfoURL': (string)
+            Link to a text file which contains the changelog of the last
+            firmware update
+
+        'X_AVM-DE_Model': (string)
+            Model name or number of the F!device
+
+        'X_AVM-DE_Disallow': (bool)
+            Flag which represent the WAN access allowed state
+
+        'X_AVM-DE_Port': (int)
+            If host is connected via ethernet, it shows the port number
+
+        'X_AVM-DE_Speed': (int)
+            Shows the speed in Mbit/s
+
+        'X_AVM-DE_UpdateAvailable': (bool)
+            `True` if update is available, `False` if no new update is
+            available
+
+        'X_AVM-DE_UpdateSuccessful': (string)
+            Shows the state of the last firmware update process
+            ('unknown', 'failed','succeeded')
+
+        'X_AVM-DE_URL': (string)
+
+        'X_AVM-DE_VPN': (bool)
+            `True` if host is a vpn connection else `False`.
+
+        'X_AVM-DE_WANAccess': (string)
+            Shows if the landevice has WAN access ('granted', 'denied', 'error')
+
+        The values are converted to the documented datatype or `None` if
+        no data available. Values from unknown keys that may be added by
+        AVM in future versions are of type `string` or `None`.
+
+        .. versionadded:: development
+        """
+        result = self._action("X_AVM-DE_GetHostListPath")
+        path = result["NewX_AVM-DE_HostListPath"]
+        url = f"{self.fc.address}:{self.fc.port}{path}"
+        root = get_xml_root(url, session=self.fc.session)
+        return [_convert_host_attributes(host) for host in root]
 
     def get_mesh_topology(self, raw=False):
         """
