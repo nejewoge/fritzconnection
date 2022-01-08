@@ -13,20 +13,20 @@ from ..core.exceptions import (
     FritzArgumentError,
     FritzLookUpError,
 )
-from ..core.utils import get_xml_root
+from ..core.utils import boolean, get_xml_root
 from .fritzbase import AbstractLibraryBase
 
 
 SERVICE = "Hosts1"
 HOSTLIST_CONVERTERS = {
     'Index': int,
-    'Active': bool,
+    'Active': boolean,
     'X_AVM-DE_Port': int,
     'X_AVM-DE_Speed': int,
-    'X_AVM-DE_UpdateAvailable': bool,
-    'X_AVM-DE_Guest': bool,
-    'X_AVM-DE_VPN': bool,
-    'X_AVM-DE_Disallow': bool,
+    'X_AVM-DE_UpdateAvailable': boolean,
+    'X_AVM-DE_Guest': boolean,
+    'X_AVM-DE_VPN': boolean,
+    'X_AVM-DE_Disallow': boolean,
 }
 
 

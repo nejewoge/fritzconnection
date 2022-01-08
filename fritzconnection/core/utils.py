@@ -20,6 +20,15 @@ def localname(node):
     return m.group('localname')
 
 
+def boolean(value):
+    """
+    Helper function to convert strings like '1' and '0' to True and
+    False. Works like `bool` but with strings. `value` must be a string
+    convertible to an `int`.
+    """
+    return bool(int(value))
+
+
 def get_content_from(url, timeout=None, session=None):
     """
     Returns text from a get-request for the given url. In case of a
